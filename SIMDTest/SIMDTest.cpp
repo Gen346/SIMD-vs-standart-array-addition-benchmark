@@ -1,28 +1,39 @@
 ﻿#include <iostream>
+#include <chrono>
 #include <xmmintrin.h> // SSE intrinsics
+#include <vector>
+#include <iomanip>
 
 int main()
 {
-    // Arrays must be aligned or size multiple of 4 for simplicity
-    alignas(16) float a[4] = { 1.0f, 2.0f, 3.0f, 4.0f };
-    alignas(16) float b[4] = { 5.0f, 6.0f, 7.0f, 8.0f };
-    alignas(16) float result[4];
+    const int N = 1000000;
+    std::vector<float> a(N, 1.0f);
+    std::vector<float> b(N, 2.0f);
+    std::vector<float> result_seq(N, 0.0f);
+    std::vector<float> result_simd(N, 0.0f);
 
-    // Load 4 floats from each array into an SSE register
-    __m128 vecA = _mm_load_ps(a);  // Load a[0..3] into vecA
-    __m128 vecB = _mm_load_ps(b);  // Load b[0..3] into vecB
+    auto start_seq = std::chrono::high_resolution_clock::now();
 
-    // Perform SIMD addition
-    __m128 vecResult = _mm_add_ps(vecA, vecB);
+    for (int i = 0; i < N; ++i)
+    {
+        result_seq[i] = a[i] + b[i];
+    }
 
-    // Store the result back to memory
-    _mm_store_ps(result, vecResult);
+    auto end_seq = std::chrono::high_resolution_clock::now();
 
-    // Print result
-    std::cout << "Result: ";
-    for (int i = 0; i < 4; ++i)
-        std::cout << result[i] << " ";
-    std::cout << std::endl;
+    std::chrono::duration<double> duration_seq = end_seq - start_seq;
 
+    auto start_SIMD = std::chrono::high_resolution_clock::now();
+    //_mm128 - 128-bit SSE (Streaming SIMD Extension) register
+    for (int i = 0; i < N - 4; i += 4) // Adding 4 floats per operation; 
+    {
+        __m128 vecA = _mm_loadu_ps(&a[i]); //load 4 floats
+        __m128 vecB = _mm_loadu_ps(&b[i]); //load 4 float
+        __m128 vecR = _mm_add_ps(vecA, vecB); //SIMD add
+
+
+    }
+
+    auto end_SIMD = std::chrono::high_resolution_clock::now();
     return 0;
 }
